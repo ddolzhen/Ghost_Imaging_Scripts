@@ -6,9 +6,13 @@ import numba
 
 
 
+## Creates numpy ndarray
+## Takes int nframes and tuple <int> screen_dimensions
 def createFrames(nframes,screen_dimensions):
     return np.zeros(shape=(nframes,screen_dimensions[0],screen_dimensions[1]))
 
+
+## Adds uniform random variable noise to every pixel in the frames
 @numba.njit(parallel=True)
 def addUniformNoise(frames,noise_max):
     for i in numba.prange(frames.shape[0]):
@@ -16,6 +20,8 @@ def addUniformNoise(frames,noise_max):
             for k in numba.prange(frames.shape[2]):
                 frames[i, j, k] += random.randrange(0, noise_max)
 
+
+## Fills frames with Negative Binomial distributed intensity (every pixel)
 @numba.njit(parallel=True)
 def addSmallSpecklesNegativeBinomial(frames,r,p):
     for i in numba.prange(frames.shape[0]):
@@ -24,6 +30,7 @@ def addSmallSpecklesNegativeBinomial(frames,r,p):
                 frames[i, j, k] += random.randrange(0, np.random.negative_binomial(r,p) )
 
 
+## Old 'Pyramid' Speckles
 def specklePatternOld(frames,speckles_per_frame):
     for i in numba.prange(frames.shape[0]):
         for k in numba.prange(speckles_per_frame):
@@ -74,6 +81,7 @@ def create_circular_mask(h, w, center=None, radius=None):
 
 
 
+## Function to pull pre-defined masks
 def definedMasks(name,frames):
     mask = np.ndarray(shape=(frames.shape[1],frames.shape[2]),
                       dtype=int)  # Has to be same size as speckle dataset. 1 for no object, 0 for object
@@ -90,7 +98,7 @@ def definedMasks(name,frames):
         return mask
 
     return 0
-
+## Cut out the mask from the frames, also optionally add noise under the mask
 @numba.njit(parallel=True)
 def cutOutMask(frames,mask,noise_range=0):
     if noise_range !=0:
@@ -107,6 +115,7 @@ def cutOutMask(frames,mask,noise_range=0):
                     frames[i,j,k]=frames[i,j,k] * mask [j,k]
 
 
+#Ghost imaging on 2 frame datasets
 @numba.njit(parallel=True)
 def ghostPixel(frames,frames_with_object):
     ghost = np.zeros(shape=(frames.shape[1],frames.shape[2]), dtype=np.double)
@@ -144,11 +153,4 @@ def ghostPixel(frames,frames_with_object):
 
 
 
-
-if __name__ == "__main__":
-    frames=createFrames(10000,(100,100))
-
-    addSmallSpecklesNegativeBinomial(frames,40,0.5)
-
-    frames_with_object=np.copy(frames)
 
